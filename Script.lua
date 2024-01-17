@@ -33,7 +33,7 @@ local BUTTON_Outside = TypeContainer.Outside
 
 local wallThickness = 1
 local wallHeight = 1
-local newWallSize = Vector3.new(1, 1, 1)
+local newWallSize = Vector3.new(2, 2, 2)
 
 
 PluginButton.Click:Connect(function()
@@ -52,6 +52,10 @@ local partObj = {
 	Orientation = {X = nil, Y = nil, Z = nil}
 }
 
+-- Function to update wall size
+local function updateWallSize(x, y, z)
+	newWallSize = Vector3.new(x, y, z)
+end
 
 -- Helper function to round a number
 local function round(number, decimalPlaces)
@@ -74,24 +78,39 @@ local function createFlushWalls()
 	local vectorFloorObj = {
 		Size = partObj.Size,
 		Position = partObj.Position,
-		Orientation = partObj.Orientation
 	}
 
-	local newWallPosition1 = CalculateNewPosition(vectorFloorObj.Position, vectorFloorObj.Size, newWallSize)
-	local newWall_1 = createWallPart(newWallSize, newWallPosition1, vectorFloorObj.Orientation)
+	local newWallPosition1 = calculateNewPosition1(vectorFloorObj.Position, vectorFloorObj.Size, newWallSize)
+	local newWall_1 = createWallPart(newWallSize, newWallPosition1)
 
-	--local newWallPosition2 = reflectWall(newWallPosition1, vectorFloorObj)
-	--local newWall_2 = createWallPart(newWallSize, newWallPosition2)
-
-	return newWall_1--, newWall_2
+	local newWallPosition2 = reflectX(newWallPosition1, vectorFloorObj)
+	local newWall_2 = createWallPart(newWallSize, newWallPosition2)
+	
+	local offset = newWallSize.X * 2
+	updateWallSize(partObj.Size.X - offset, 5, 2)
+	local newWallPosition3 = calculateNewPosition2(vectorFloorObj.Position, vectorFloorObj.Size, newWallSize, offset)
+	local newWall_3 = createWallPart(newWallSize, newWallPosition3)
+	
+	local newWallPosition4 = reflectZ(newWallPosition3, vectorFloorObj)
+	local newWall_4 = createWallPart(newWallSize, newWallPosition4)
+	print(newWallPosition3)
+	return newWall_1, newWall_2
 end
 
 -- Function to reflect a wall
-function reflectWall(floorPos, floorObj)
+function reflectX(floorPos, floorObj)
 	local reflectedX = 2 * floorObj.Position.X - floorPos.X
 	local reflectedPosition = Vector3.new(reflectedX, floorPos.Y, floorPos.Z)
 	return reflectedPosition
 end
+
+function reflectZ(floorPos, floorObj)
+	local reflectedZ = 2 * floorObj.Position.Z - floorPos.Z
+	local reflectedPosition = Vector3.new(floorPos.X, floorPos.Y, reflectedZ)
+	return reflectedPosition
+end
+
+
 
 -- Function to create a wall part
 function createWallPart(size, position)
@@ -105,8 +124,12 @@ function createWallPart(size, position)
 	return newPart
 end
 
+function calculateNewOffsetPosition(wallPosition)
+	print(wallPosition)
+end
+
 -- Function to calculate new position
-function CalculateNewPosition(floorPosition, floorSize, newWallSize)
+function calculateNewPosition1(floorPosition, floorSize, newWallSize)
 	local newWallPosition = floorPosition - (floorSize / 2) + (newWallSize / 2)
 	local newWallHeight = floorPosition.Y + (floorSize.Y / 2) + (newWallSize.Y / 2)
 	newWallPosition = Vector3.new(newWallPosition.X, newWallHeight, newWallPosition.Z)
@@ -114,10 +137,17 @@ function CalculateNewPosition(floorPosition, floorSize, newWallSize)
 	return newWallPosition
 end
 
--- Function to update wall size
-local function updateWallSize(x, y, z)
-	newWallSize = Vector3.new(x, y, z)
+-- Function to calculate new position
+function calculateNewPosition2(floorPosition, floorSize, newWallSize, offset)
+	local newWallPosition = floorPosition + (floorSize / 2) - (newWallSize / 2)
+	local newWallHeight = floorPosition.Y + (floorSize.Y / 2) + (newWallSize.Y / 2)
+	newWallPosition = Vector3.new(newWallPosition.X - (offset/2), newWallHeight, newWallPosition.Z)
+
+	return newWallPosition
 end
+
+
+
 
 -- Function to get part information
 local function getPartInfo()
@@ -131,8 +161,8 @@ local function getPartInfo()
 		partObj.Size = roundVector(part.Size, 3)
 		partObj.Position = roundVector(part.CFrame.Position, 3)
 		partObj.Orientation = roundVector(part.Orientation, 3)
-
-		--updateWallSize(2, 5, partObj.Size.Z)
+		updateWallSize(2, 5, partObj.Size.Z)
+		
 	else
 		-- Handle the case when no parts are selected
 		print("No parts selected")
