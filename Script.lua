@@ -42,13 +42,24 @@ local BUTTON_AutoColor = BotContainer.Auto.AutoC
 
 local BUTTON_Place = WallsGui.PlaceButton
 
+local matchHeightButtonEnabled = true
+local matchThickButtonEnabled = true
+local matchColorButtonEnabled = true
 
 local xHeightCall = true
+local autoThick = false
+local autoHeight = false
+local autoColor = false
 
 local wallThickness = 1
 local wallHeight = 1
 local wallColor = Color3.fromHex("FFFFFF")
 
+
+local autoColorHighlight = Color3.new(0.666667, 0, 1)
+local defaultButtonColor =  Color3.new(0.333333, 0.333333, 0.498039)
+local matchColorHighlight = Color3.new(0.666667, 0.666667, 1)
+local matchColorBorderHighlight = Color3.new(0.666667, 0, 1)
 
 
 PluginButton.Click:Connect(function()
@@ -104,6 +115,7 @@ local function updateWallHeight(input)
 	local numericValue = validateNumberInput(input, 0.001, 2048)
 	if numericValue then
 		wallHeight = input
+		updateWallSizes()
 	end
 	
 end
@@ -252,6 +264,22 @@ local function getPartInfo()
 		partObj.Orientation = roundVector(part.Orientation, 3)
 		partObj.Color = part.Color
 		updateWallSizes()
+		if autoThick == true then
+			updateWallThickness(partObj.Size.Y)
+			TEXTBOX_Thickness.Text = round(partObj.Size.Y,3)
+		end
+		if autoHeight == true and xHeightCall == true then
+			updateWallHeight(partObj.Size.X)
+			TEXTBOX_Height.Text = round(partObj.Size.X,3)
+		end
+		if autoHeight == true and xHeightCall == false then
+			updateWallHeight(partObj.Size.Z)
+			TEXTBOX_Height.Text = round(partObj.Size.Z,3)
+		end
+		if autoColor == true then
+			updateWallColor(partObj.Color, true)
+			TEXTBOX_Color.Text = color3ToHex(partObj.Color)
+		end
 		
 	else
 		-- Handle the case when no parts are selected
@@ -268,28 +296,97 @@ game:GetService("Selection").SelectionChanged:Connect(getPartInfo)
 
 
 BUTTON_MatchHeight.MouseButton1Click:Connect(function()
-	if xHeightCall == true then
-		updateWallHeight(partObj.Size.X)
-		TEXTBOX_Height.Text = partObj.Size.X
-		xHeightCall = false
-		BUTTON_MatchHeight.Text = "match floor [h]z"
-	else
-		updateWallHeight(partObj.Size.Z)
-		TEXTBOX_Height.Text = partObj.Size.Z
-		xHeightCall = true
-		BUTTON_MatchHeight.Text = "match floor [h]x"
+	if(matchHeightButtonEnabled) then
+		if xHeightCall == true then
+			updateWallHeight(partObj.Size.X)
+			TEXTBOX_Height.Text = round(partObj.Size.X,3)
+			xHeightCall = false
+			BUTTON_MatchHeight.Text = "match floor [h]z"
+		else
+			updateWallHeight(partObj.Size.Z)
+			TEXTBOX_Height.Text = round(partObj.Size.Z,3)
+			xHeightCall = true
+			BUTTON_MatchHeight.Text = "match floor [h]x"
+		end
 	end
 end)
 
 BUTTON_MatchThickness.MouseButton1Click:Connect(function()
-	updateWallThickness(partObj.Size.Y)
-	TEXTBOX_Thickness.Text = partObj.Size.Y
+	if(matchThickButtonEnabled) then
+		updateWallThickness(partObj.Size.Y)
+		TEXTBOX_Thickness.Text = round(partObj.Size.Y,3)
+	end
 end)
 
 BUTTON_MatchColor.MouseButton1Click:Connect(function()
-	updateWallColor(partObj.Color, true)
-	TEXTBOX_Color.Text = color3ToHex(partObj.Color)
+	if(matchColorButtonEnabled) then
+		updateWallColor(partObj.Color, true)
+		TEXTBOX_Color.Text = color3ToHex(partObj.Color)
+	end
 end)
+
+BUTTON_AutoThick.MouseButton1Click:Connect(function()
+	if(autoThick == false) then
+		matchThickButtonEnabled = false
+		BUTTON_AutoThick.BackgroundColor3 = autoColorHighlight
+		BUTTON_MatchThickness.Text = "automatch[t]y"
+		BUTTON_MatchThickness.BackgroundColor3 = matchColorHighlight
+		autoThick = true
+	else
+		matchThickButtonEnabled = true
+		BUTTON_MatchThickness.Text = "match floor [t]y"
+		BUTTON_MatchThickness.BackgroundColor3 = defaultButtonColor
+		BUTTON_AutoThick.BackgroundColor3 = defaultButtonColor
+		autoThick = false
+	end
+end)
+
+BUTTON_AutoHeight.MouseButton1Click:Connect(function()
+	if not autoHeight then
+		matchHeightButtonEnabled = false
+		BUTTON_MatchHeight.Text = "automatch[h]x"
+		BUTTON_MatchHeight.BackgroundColor3 = matchColorHighlight
+		
+		BUTTON_AutoHeight.BackgroundColor3 = autoColorHighlight
+		autoHeight = true
+		xHeightCall = true
+	elseif autoHeight and BUTTON_AutoHeight.Text == "[h] x" then
+		BUTTON_MatchHeight.Active = false
+		BUTTON_MatchHeight.Text = "automatch[h]z"
+		BUTTON_MatchHeight.BackgroundColor3 = matchColorHighlight
+
+		BUTTON_AutoHeight.Text = "[h] z"
+		BUTTON_AutoHeight.BackgroundColor3 = autoColorHighlight
+		autoHeight = true
+		xHeightCall = false
+	elseif autoHeight and BUTTON_AutoHeight.Text == "[h] z" then
+		matchHeightButtonEnabled = true
+		BUTTON_MatchHeight.Text = "match floor [h]x"
+		BUTTON_MatchHeight.BackgroundColor3 = defaultButtonColor
+		
+		BUTTON_AutoHeight.Text = "[h] x"
+		BUTTON_AutoHeight.BackgroundColor3 = defaultButtonColor
+		autoHeight = false
+		xHeightCall = true
+	end
+end)
+
+BUTTON_AutoColor.MouseButton1Click:Connect(function()
+	if(autoColor == false) then
+		matchColorButtonEnabled = false
+		BUTTON_AutoColor.BackgroundColor3 = autoColorHighlight
+		BUTTON_MatchColor.Text = "automatch[c]"
+		BUTTON_MatchColor.BackgroundColor3 = matchColorHighlight
+		autoColor = true
+	else
+		matchColorButtonEnabled = true
+		BUTTON_MatchColor.Text = "match floor [c]"
+		BUTTON_MatchColor.BackgroundColor3 = defaultButtonColor
+		BUTTON_AutoColor.BackgroundColor3 = defaultButtonColor
+		autoColor = false
+	end
+end)
+
 
 
 BUTTON_Place.MouseButton1Click:Connect(function()
