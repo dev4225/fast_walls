@@ -46,6 +46,7 @@ local matchHeightButtonEnabled = true
 local matchThickButtonEnabled = true
 local matchColorButtonEnabled = true
 
+local flush = true
 local xHeightCall = true
 local autoThick = false
 local autoHeight = false
@@ -54,7 +55,7 @@ local autoRoof = false
 
 local wallThickness = 1
 local wallHeight = 1
-local wallColor = Color3.fromHex("FFFFFF")
+local wallColor = Color3.fromHex("1B2A35")
 
 
 local autoColorHighlight = Color3.new(0.666667, 0, 1)
@@ -184,26 +185,32 @@ local function createFlushWalls()
 	}
 
 	local newWallPosition1 = calculateNewPosition1(vectorFloorObj.Position, vectorFloorObj.Size, wallSizeZ)
-	local newWall_1 = createWallPart(wallSizeZ, newWallPosition1)
-
 	local newWallPosition2 = reflectX(newWallPosition1, vectorFloorObj)
-	local newWall_2 = createWallPart(wallSizeZ, newWallPosition2)
+	
 
 	local offset = wallSizeZ.X * 2
-	wallSizeX = Vector3.new(partObj.Size.X - offset, wallHeight, wallThickness)
+	if(flush) then
+		wallSizeX = Vector3.new(partObj.Size.X - offset, wallHeight, wallThickness)
+	else
+		wallSizeX = Vector3.new(partObj.Size.X, wallHeight, wallThickness)
+	end
+	
+	
 	local newWallPosition3 = calculateNewPosition2(vectorFloorObj.Position, vectorFloorObj.Size, wallSizeX, offset)
-	local newWall_3 = createWallPart(wallSizeX, newWallPosition3)
-
 	local newWallPosition4 = reflectZ(newWallPosition3, vectorFloorObj)
+	
+	local newWall_1 = createWallPart(wallSizeZ, newWallPosition1)
+	local newWall_2 = createWallPart(wallSizeZ, newWallPosition2)
+	local newWall_3 = createWallPart(wallSizeX, newWallPosition3)
 	local newWall_4 = createWallPart(wallSizeX, newWallPosition4)
-	print(newWallPosition3)
-	return newWall_1, newWall_2
 end
 
 -- Function to reflect a wall
 function reflectX(floorPos, floorObj)
 	local reflectedX = 2 * floorObj.Position.X - floorPos.X
+	
 	local reflectedPosition = Vector3.new(reflectedX, floorPos.Y, floorPos.Z)
+	
 	return reflectedPosition
 end
 
@@ -237,16 +244,29 @@ end
 function calculateNewPosition1(floorPosition, floorSize, newWallSize)
 	local newWallPosition = floorPosition - (floorSize / 2) + (newWallSize / 2)
 	local newWallHeight = floorPosition.Y + (floorSize.Y / 2) + (newWallSize.Y / 2)
-	newWallPosition = Vector3.new(newWallPosition.X, newWallHeight, newWallPosition.Z)
+	if(flush) then
+		newWallPosition = Vector3.new(newWallPosition.X, newWallHeight, newWallPosition.Z)
+	else
+		newWallPosition = Vector3.new(newWallPosition.X - wallThickness, newWallHeight, newWallPosition.Z)
+	end
+	
 
 	return newWallPosition
 end
+
 
 -- Function to calculate new position
 function calculateNewPosition2(floorPosition, floorSize, newWallSize, offset)
 	local newWallPosition = floorPosition + (floorSize / 2) - (newWallSize / 2)
 	local newWallHeight = floorPosition.Y + (floorSize.Y / 2) + (newWallSize.Y / 2)
-	newWallPosition = Vector3.new(newWallPosition.X - (offset/2), newWallHeight, newWallPosition.Z)
+
+	if(flush) then
+		newWallPosition = Vector3.new(newWallPosition.X - (offset/2), newWallHeight, newWallPosition.Z)
+	else
+		newWallPosition = Vector3.new(newWallPosition.X, newWallHeight, newWallPosition.Z + wallThickness)
+	end
+
+	
 
 	return newWallPosition
 end
@@ -287,9 +307,6 @@ local function getPartInfo()
 		if autoColor == true then
 			updateWallColor(partObj.Color, true)
 			TEXTBOX_Color.Text = color3ToHex(partObj.Color)
-		end
-		if autoRoof == true  then
-			addRoof()
 		end
 
 	else
@@ -412,9 +429,22 @@ BUTTON_AutoRoof.MouseButton1Click:Connect(function()
 	end
 end)
 
+BUTTON_WallPlacement.MouseButton1Click:Connect(function()
+	if(flush == true) then
+		BUTTON_WallPlacement.Text = "outside"
+		flush = false
+	else
+		BUTTON_WallPlacement.Text = "flush"
+		flush = true
+	end
+end)
+
 
 BUTTON_Place.MouseButton1Click:Connect(function()
 	getPartInfo()
 	updateWallSettings()
 	createFlushWalls()
+	if autoRoof == true  then
+		addRoof()
+	end
 end)
