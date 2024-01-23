@@ -50,6 +50,7 @@ local xHeightCall = true
 local autoThick = false
 local autoHeight = false
 local autoColor = false
+local autoRoof = false
 
 local wallThickness = 1
 local wallHeight = 1
@@ -117,7 +118,7 @@ local function updateWallHeight(input)
 		wallHeight = input
 		updateWallSizes()
 	end
-	
+
 end
 
 local function updateWallThickness(input)
@@ -126,7 +127,7 @@ local function updateWallThickness(input)
 		wallThickness = input
 		updateWallSizes()
 	end
-	
+
 end
 
 local function updateWallColor(input, valid)
@@ -187,12 +188,12 @@ local function createFlushWalls()
 
 	local newWallPosition2 = reflectX(newWallPosition1, vectorFloorObj)
 	local newWall_2 = createWallPart(wallSizeZ, newWallPosition2)
-	
+
 	local offset = wallSizeZ.X * 2
 	wallSizeX = Vector3.new(partObj.Size.X - offset, wallHeight, wallThickness)
 	local newWallPosition3 = calculateNewPosition2(vectorFloorObj.Position, vectorFloorObj.Size, wallSizeX, offset)
 	local newWall_3 = createWallPart(wallSizeX, newWallPosition3)
-	
+
 	local newWallPosition4 = reflectZ(newWallPosition3, vectorFloorObj)
 	local newWall_4 = createWallPart(wallSizeX, newWallPosition4)
 	print(newWallPosition3)
@@ -250,6 +251,13 @@ function calculateNewPosition2(floorPosition, floorSize, newWallSize, offset)
 	return newWallPosition
 end
 
+local function addRoof()
+	local floorSize = Vector3.new(partObj.Size.X, partObj.Size.Y, partObj.Size.Z)
+	local floorPosition = Vector3.new(partObj.Position.X, partObj.Position.Y + wallHeight + 1, partObj.Position.Z)
+	
+	createWallPart(floorSize, floorPosition)
+end
+
 -- Function to get part information
 local function getPartInfo()
 	local selectedParts = game:GetService("Selection"):Get()
@@ -280,7 +288,10 @@ local function getPartInfo()
 			updateWallColor(partObj.Color, true)
 			TEXTBOX_Color.Text = color3ToHex(partObj.Color)
 		end
-		
+		if autoRoof == true  then
+			addRoof()
+		end
+
 	else
 		-- Handle the case when no parts are selected
 		print("No parts selected")
@@ -346,7 +357,7 @@ BUTTON_AutoHeight.MouseButton1Click:Connect(function()
 		matchHeightButtonEnabled = false
 		BUTTON_MatchHeight.Text = "automatch[h]x"
 		BUTTON_MatchHeight.BackgroundColor3 = matchColorHighlight
-		
+
 		BUTTON_AutoHeight.BackgroundColor3 = autoColorHighlight
 		autoHeight = true
 		xHeightCall = true
@@ -363,7 +374,7 @@ BUTTON_AutoHeight.MouseButton1Click:Connect(function()
 		matchHeightButtonEnabled = true
 		BUTTON_MatchHeight.Text = "match floor [h]x"
 		BUTTON_MatchHeight.BackgroundColor3 = defaultButtonColor
-		
+
 		BUTTON_AutoHeight.Text = "[h] x"
 		BUTTON_AutoHeight.BackgroundColor3 = defaultButtonColor
 		autoHeight = false
@@ -387,6 +398,19 @@ BUTTON_AutoColor.MouseButton1Click:Connect(function()
 	end
 end)
 
+BUTTON_AddRoof.MouseButton1Click:Connect(function()
+	addRoof()
+end)
+
+BUTTON_AutoRoof.MouseButton1Click:Connect(function()
+	if(autoRoof == false) then
+		autoRoof = true
+		BUTTON_AutoRoof.BackgroundColor3 = matchColorHighlight
+	else
+		autoRoof = false
+		BUTTON_AutoRoof.BackgroundColor3 = defaultButtonColor
+	end
+end)
 
 
 BUTTON_Place.MouseButton1Click:Connect(function()
