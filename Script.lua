@@ -1,5 +1,5 @@
-local Toolbar = plugin:CreateToolbar("Mapping Tools 2")
-local PluginButton = Toolbar:CreateButton("Walls", "Walls made easy!", "rbxassetid://4370186570", "Fast Walls")
+local Toolbar = plugin:CreateToolbar("Mapping Tools")
+local PluginButton = Toolbar:CreateButton("Walls", "Walls made easy!", "rbxassetid://16096364344", "Fast Walls")
 local Opened = false
 
 local WallsWidgetInfo = DockWidgetPluginGuiInfo.new(
@@ -42,6 +42,8 @@ local BUTTON_AutoColor = BotContainer.Auto.AutoC
 
 local BUTTON_Place = WallsGui.PlaceButton
 
+local ChangeHistoryService = game:GetService("ChangeHistoryService")
+
 local matchHeightButtonEnabled = true
 local matchThickButtonEnabled = true
 local matchColorButtonEnabled = true
@@ -53,6 +55,7 @@ local autoHeight = false
 local autoColor = false
 local autoRoof = false
 
+
 local wallThickness = 1
 local wallHeight = 1
 local wallColor = Color3.fromHex("1B2A35")
@@ -62,7 +65,18 @@ local autoColorHighlight = Color3.new(0.666667, 0, 1)
 local defaultButtonColor =  Color3.new(0.333333, 0.333333, 0.498039)
 local matchColorHighlight = Color3.new(0.666667, 0.666667, 1)
 local matchColorBorderHighlight = Color3.new(0.666667, 0, 1)
+local errorColor = Color3.fromHex("FF2A00")
+local bannerColor = Color3.fromHex("00d5ff")
 
+
+local currentConnection = nil
+
+local function disconnectPreviousConnection()
+	if currentConnection then
+		currentConnection:Disconnect()
+		currentConnection = nil
+	end
+end
 
 PluginButton.Click:Connect(function()
 	if Opened then
@@ -75,6 +89,7 @@ PluginButton.Click:Connect(function()
 end)
 
 local partObj = {
+	Part = nil,
 	Size = {X = nil, Y = nil, Z = nil},
 	Position = {X = nil, Y = nil, Z = nil},
 	Orientation = {X = nil, Y = nil, Z = nil},
@@ -86,7 +101,7 @@ local function validateNumberInput(input, minValue, maxValue)
 	if numericValue and numericValue >= minValue and numericValue <= maxValue then
 		return numericValue
 	else
-		warn("Invalid numeric input. Please enter a number between " .. minValue .. " and " .. maxValue)
+		--warn("Invalid numeric input. Please enter a number between " .. minValue .. " and " .. maxValue)
 		return nil
 	end
 end
@@ -96,12 +111,13 @@ local function validateHexColor(input)
 	input = input:gsub("#", "")
 
 	-- Validate if the input is a valid hexadecimal color string
-	if (#input == 6 or 3) and input:match("[0-9A-Fa-f]+") then
+	if (#input == 6 or #input == 3) and input:match("[0-9A-Fa-f]+") then
 		return input
 	else
-		warn("Invalid hexadecimal color input. Please enter a valid 6-digit hex color code.")
+		--warn("Invalid hexadecimal color input. Please enter a valid 6-digit or 3-digit hex color code.")
 		return nil
 	end
+
 end
 
 local wallSizeZ = Vector3.new(wallThickness, wallHeight, partObj.Size.Z)
@@ -137,9 +153,9 @@ local function updateWallColor(input, valid)
 	else
 		local hexColor = validateHexColor(input)
 		if hexColor then
-			print("HEXINPUT?" .. input)
 			wallColor = Color3.fromHex(input)
 		end
+		
 	end
 end
 
@@ -177,6 +193,24 @@ local function color3ToHex(color)
 	return hexColor
 end
 
+local function rotate(wallGroup)
+	wallGroup:PivotTo(wallGroup:GetPivot() * CFrame.Angles(math.rad(partObj.Orientation.X), math.rad(partObj.Orientation.Y), math.rad(partObj.Orientation.Z)))
+end
+
+function ungroupModel(model)
+	-- Get all children of the model
+	local children = model:GetChildren()
+
+	-- Reparent each child to the workspace
+	for _, child in ipairs(children) do
+		if child:IsA("Part") or child:IsA("Model") then -- Check if the child is a Part or a Model
+			child.Parent = workspace
+		end
+	end
+
+	-- Delete the model
+	model:Destroy()
+end 
 -- Function to create and reflect walls
 local function createFlushWalls()
 	local vectorFloorObj = {
@@ -198,11 +232,18 @@ local function createFlushWalls()
 	
 	local newWallPosition3 = calculateNewPosition2(vectorFloorObj.Position, vectorFloorObj.Size, wallSizeX, offset)
 	local newWallPosition4 = reflectZ(newWallPosition3, vectorFloorObj)
+
+	local wallGroup = Instance.new("Model")
+	wallGroup.Name = "WallGroup"
+	wallGroup.Parent = workspace
+
+	local newWall_1 = createWallPart(wallSizeZ, newWallPosition1, wallGroup)
+	local newWall_2 = createWallPart(wallSizeZ, newWallPosition2, wallGroup)
+	local newWall_3 = createWallPart(wallSizeX, newWallPosition3, wallGroup)
+	local newWall_4 = createWallPart(wallSizeX, newWallPosition4, wallGroup)
 	
-	local newWall_1 = createWallPart(wallSizeZ, newWallPosition1)
-	local newWall_2 = createWallPart(wallSizeZ, newWallPosition2)
-	local newWall_3 = createWallPart(wallSizeX, newWallPosition3)
-	local newWall_4 = createWallPart(wallSizeX, newWallPosition4)
+	rotate(wallGroup)
+	ungroupModel(wallGroup)
 end
 
 -- Function to reflect a wall
@@ -221,23 +262,18 @@ function reflectZ(floorPos, floorObj)
 end
 
 
-
--- Function to create a wall part
-function createWallPart(size, position)
+function createWallPart(size, position, parentModel)
+	print("part created")
 	local newPart = Instance.new("Part")
-
-	-- Set properties for the new part
 	newPart.Size = size
 	newPart.Position = position
-	newPart.Parent = workspace -- Assuming you want to parent it to the workspace
+	if parentModel ~= nil then
+		print("hit")
+		newPart.Parent = parentModel
+	end
 	newPart.Anchored = true
 	newPart.Color = wallColor
-
 	return newPart
-end
-
-function calculateNewOffsetPosition(wallPosition)
-	print(wallPosition)
 end
 
 -- Function to calculate new position
@@ -274,19 +310,21 @@ end
 local function addRoof()
 	local floorSize = Vector3.new(partObj.Size.X, partObj.Size.Y, partObj.Size.Z)
 	local floorPosition = Vector3.new(partObj.Position.X, partObj.Position.Y + wallHeight + 1, partObj.Position.Z)
-	
-	createWallPart(floorSize, floorPosition)
+	print("adding roof")
+	createWallPart(floorSize, floorPosition, workspace)
 end
 
 -- Function to get part information
 local function getPartInfo()
 	local selectedParts = game:GetService("Selection"):Get()
 
+	disconnectPreviousConnection()
+
 	-- Check if there is at least one part selected
 	if #selectedParts > 0 then
 		-- Take the first part in the selection
 		local part = selectedParts[1]
-
+		partObj.Part = part
 		partObj.Size = roundVector(part.Size, 3)
 		partObj.Position = roundVector(part.CFrame.Position, 3)
 		partObj.Orientation = roundVector(part.Orientation, 3)
@@ -309,14 +347,26 @@ local function getPartInfo()
 			TEXTBOX_Color.Text = color3ToHex(partObj.Color)
 		end
 
+		currentConnection = part.Changed:Connect(function(propertyName)
+			-- Check if the changed property is one of the properties we care about
+			if propertyName == "Size" or propertyName == "Position" or propertyName == "Orientation" or propertyName == "Color" then
+				getPartInfo() -- Call your function to update the UI
+			end
+		end)
+
 	else
 		-- Handle the case when no parts are selected
-		print("No parts selected")
+		--print("No parts selected")
 	end
 end
 
 
-
+function showError(errorNumber)
+	if errorNumber == 1 then
+		LABEL_Status.BackgroundColor3 = errorColor
+		LABEL_Status.Text = "NO PART SELECTED"
+	end
+end
 
 
 -- Connect the function to the selection changed event
@@ -447,4 +497,7 @@ BUTTON_Place.MouseButton1Click:Connect(function()
 	if autoRoof == true  then
 		addRoof()
 	end
+	TEXTBOX_Color.BorderColor3 = wallColor
+	LABEL_Status.Text = "h[" .. wallHeight .. "]t[" .. wallThickness .. "]_fastwalls"
 end)
+
